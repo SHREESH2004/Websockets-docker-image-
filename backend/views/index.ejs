@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title><%= title %></title>
+    <style>
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: #ffffff;
+            color: #333333;
+        }
+        header {
+            padding: 10px 20px;
+            background: #f4f4f4;
+            border-bottom: 1px solid #ddd;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        h2 {
+            margin: 0;
+            font-size: 1.1rem;
+        }
+        .user-count {
+            font-size: 0.9rem;
+            font-weight: bold;
+            color: #007acc;
+        }
+        #editor {
+            height: calc(100vh - 50px);
+        }
+    </style>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.45.0/min/vs/editor/editor.main.min.css">
+</head>
+<body>
+
+    <header>
+        <h2>Collaborative Code Editor</h2>
+        <div class="user-count">Users Online: <span id="userCount">1</span></div>
+    </header>
+
+    <div id="editor"></div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.45.0/min/vs/loader.min.js"></script>
+
+    <script type="module">
+        import * as Y from "https://esm.sh/yjs@13.6.27";
+        import { SocketIOProvider } from "https://esm.sh/y-socket.io@1.1.3";
+        import { MonacoBinding } from "https://esm.sh/y-monaco@0.1.6";
+
+        require.config({
+            paths: {
+                vs: "https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.45.0/min/vs"
+            }
+        });
+
+        require(["vs/editor/editor.main"], function () {
+            const editor = monaco.editor.create(document.getElementById("editor"), {
+                value: "// Start typing code here...\n",
+                language: "javascript",
+                theme: "vs",
+                automaticLayout: true
+            });
+
+            const doc = new Y.Doc();
+            const yText = doc.getText("code");
+
+            const provider = new SocketIOProvider(
+                window.location.origin,
+                "public",
+                doc,
+                { autoConnect: true }
+            );
+
+            provider.awareness.on("change", () => {
+                const states = Array.from(provider.awareness.getStates().keys());
+                document.getElementById("userCount").innerText = states.length || 1;
+            });
+
+            new MonacoBinding(
+                yText,
+                editor.getModel(),
+                new Set([editor]),
+                provider.awareness
+            );
+        });
+    </script>
+</body>
+</html>
